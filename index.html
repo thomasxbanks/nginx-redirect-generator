@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>nginx redirects</title>
+  <style>
+    body {
+      margin: 0;
+      background: whitesmoke;
+      color: darkslategray;
+      font-family: "Fira Mono", "Inconsolata", "Consolas", "Courier New", Courier, monospace;
+      font-size: 0.8rem;
+    }
+
+    main {
+      display: block;
+      padding: 1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <main></main>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script>
+    const makeRedirect = (value) => {
+      return `
+        <pre>rewrite ^/${value.old}?$ ${value.new} permanent;</pre>
+      `
+    }
+
+    const splitUrl = (url) => {
+      let arr = url.split("/")
+      return arr.splice(3, arr.length).clean("")
+    }
+
+    Array.prototype.clean = function (deleteValue) {
+      for (var i = 0; i < this.length; i++) {
+        if (this[i] == deleteValue) {
+          this.splice(i, 1);
+          i--;
+        }
+      }
+      return this;
+    };
+
+    const csvJSON = (csv) => {
+      var line = csv.replace("\n", "")
+      var lines = csv.split("\r")
+
+      var result = []
+
+      var headers = lines[0].split(",")
+
+      for (var i = 1; i < lines.length; i++) {
+
+        var obj = {}
+        var currentline = lines[i].split(",")
+
+        for (var j = 0; j < headers.length; j++) {
+          obj[headers[j]] = currentline[j]
+        }
+
+        result.push(obj)
+
+      }
+
+      //return result //JavaScript object
+      return JSON.stringify(result) //JSON
+    }
+    axios.get('./redirects.csv', {})
+      .then(function (response) {
+        // Log for debug
+        //console.log(response.request.responseText)
+        let data = JSON.parse(csvJSON(response.request.responseText))
+
+        // log for debug
+        //console.log(data)
+
+        data.forEach((datum) => {
+          datum.old = splitUrl(datum.old).join('/')
+          if ( (datum.new.includes('http')) && (!datum.old.includes('jpg')) && (!datum.old.includes('png')) ) {
+            document.querySelector('main').innerHTML += makeRedirect(datum)
+          } else {
+            console.error("Bad redirects:", datum.new)
+          }
+        })
+      })
+      .catch(function (error) {
+        console.log(error)
+      })
+  </script>
+</body>
+
+</html>
